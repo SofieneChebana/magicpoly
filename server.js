@@ -1,0 +1,239 @@
+import {Game} from './game.js';
+
+import express from 'express';
+import http from 'http';
+import { Server } from 'socket.io';
+//const { start } = require('repl');
+
+// --- Configuration ---
+const app = express();
+app.use(express.static("public"));
+
+const server = http.createServer(app);
+const PORT = 3000;
+const ROOM_SIZE = 4; 
+
+const io = new Server(server, {
+  cors: { origin: "*", methods: ["GET", "POST"] }
+});
+let activeRooms = {};      // Stockage des rooms actives
+let roomCounter = 0;
+let playersLoaded = {};
+
+
+io.on('connection', (socket) => {
+    console.log("Quelqu'un s'est connecté : "+ socket.id);
+
+    const safeRooms = {};
+
+    for (const roomID in activeRooms) {
+        const room = activeRooms[roomID];
+
+        safeRooms[roomID] = {
+            id: room.id,
+            gameState: {
+                status: room.gameState.status,
+                playersCount: room.players.usernames.length,
+            }
+        };
+    }
+
+    socket.emit("roomsDisplay", safeRooms);
+    //socket.emit('roomsDisplay', activeRooms);
+    
+    socket.on('createRoom', (username) => {
+        // Assurez-vous que le joueur n'est pas déjà en file
+            // Créer une instance du joueur (avec ses stats si besoin)
+            
+            let roomID = createRoom(socket, username);
+            socket.roomID = roomID;
+            socket.emit('roomInfo', sanitizeRoom(activeRooms[roomID]));
+    });
+ 
+
+    socket.on('join', (data) => {
+    const roomID = data[1];
+    const username = data[2];
+
+    const room = activeRooms[roomID];
+    if (!room) return;
+
+    if (room.players.ids.length >= ROOM_SIZE) return;
+
+    if (room.gameState.status !== 'waiting_for_load') return;
+
+    if (room.players.usernames.includes(username)) return;
+
+    // 🔥 Toujours socket.id, JAMAIS data[0]
+    room.players.ids.push(socket.id);
+    room.players.usernames.push(username);
+
+    socket.roomID = roomID;
+    socket.join(roomID);
+
+    io.to(roomID).emit('roomInfo', sanitizeRoom(room));
+    });
+
+    socket.on("disconnect", () => {
+        console.log("Joueur déconnecté :", socket.id);
+
+        const roomID = socket.roomID;
+        if (!roomID || !activeRooms[roomID]) return;
+        if (!activeRooms[roomID] || !activeRooms[roomID].players.ids.includes(socket.id)) {
+            return; // ignorer l'action
+        }
+
+        const room = activeRooms[roomID];
+
+        // Retirer le joueur de la room
+        const index = room.players.ids.indexOf(socket.id);
+        if (index !== -1) {
+            room.players.ids.splice(index, 1);
+            room.players.usernames.splice(index, 1);
+        }
+
+        // Notifier les autres joueurs
+        io.to(roomID).emit('roomUpdate', sanitizeRoom(activeRooms[roomID]));
+
+        // Si la room est vide → supprimer
+        if (room.players.ids.length === 0) {
+            delete activeRooms[roomID];
+            console.log("Room supprimée :", roomID);
+        }
+    });
+
+    
+    // ... Autres événements de jeu (ex: 'playerMove') gérés dans la room ...
+    socket.on('clientLoaded', (roomData) =>{
+
+        const room = activeRooms[roomData.roomID];
+        if (!room) return; 
+
+        
+        playersLoaded[socket.id] = true;
+
+        
+        if (room.players.ids.every(id => playersLoaded[id])){
+            console.log(`[${roomID}`);
+        }
+        activeRooms[roomID].gameState.status = 'playing';
+
+        io.to(roomID).emit('start', { message: 'GO!' });
+    });
+
+    socket.on('startClick', (roomID)=>{
+        activeRooms[roomID].gameState.status = 'started';
+        console.log(activeRooms[roomID] + "a lancé la partie");
+        console.log(activeRooms[roomID].gameState.status);
+
+        activeRooms[roomID].game = new Game(io, activeRooms[roomID], activeRooms[roomID].players.usernames);
+        activeRooms[roomID].game.init();
+        io.to(roomID).emit('start', roomID);
+    });
+
+
+    socket.on('actionClick', (roomID) =>{
+        safeAction(socket, roomID, (game) => {
+            activeRooms[roomID].game.playTurn();
+            io.to(roomID).emit("data", game.getData());
+        });   
+    });
+
+    socket.on('popUpClick', (roomID) =>{
+        safeAction(socket, roomID, (game) => {
+            activeRooms[roomID].game.popUpClick();
+            io.to(roomID).emit("data", game.getData());
+        });  
+            
+        });
+        
+    socket.on('endTurnClick', (roomID) =>{
+        safeAction(socket, roomID, (game) => {
+            activeRooms[roomID].game.endTurn();
+            io.to(roomID).emit("data", game.getData());
+        });  
+            
+        });
+    
+    socket.on('freeClick', (roomID) =>{
+        safeAction(socket, roomID, (game) => {
+            activeRooms[roomID].game.free();
+            io.to(roomID).emit("data", game.getData());
+        });
+    });
+    
+    socket.on('sendEmote', (data) => {
+        // data contient : { emoteImg: '😂', playerId: '123' }
+        // On diffuse à tout le monde dans la même partie
+        io.to(data.roomID).emit('displayEmote', {
+            emote: data.emote,
+            playerId: data.playerId
+        });
+    });
+});
+
+
+function createRoom(socket, username) {
+    const newRoomID = "ROOM_"+roomCounter;
+    const matchedPlayers = [socket];
+    const playerIDs = matchedPlayers.map(p => p.id);
+    console.log(playerIDs);
+    // 1. Enregistrement de la Room
+    activeRooms[newRoomID] = {
+        id: newRoomID,
+        players: {  
+                    ids: playerIDs,
+                    usernames: new Array(username)
+                },
+        owner: socket.id,
+        gameState: { status: 'waiting_for_load' },
+        game: null
+    };
+    roomCounter++;
+    console.log(`Room créé: ${newRoomID}. Il y a ${roomCounter} rooms`);
+
+    // 2. Assignation et Notification
+    matchedPlayers.forEach(player => {
+        // Le socket rejoint le canal de diffusion de la Room
+        player.join(newRoomID); 
+        
+        // Envoi au client des informations de connexion (RoomID et joueurs)
+        socket.emit('matchFound', { 
+            roomID: newRoomID, 
+            players: playerIDs 
+        });
+    });
+
+    // 3. Notifier la Room entière que les joueurs sont prêts à charger
+    io.to(newRoomID).emit('roomUpdate', activeRooms[newRoomID]);
+
+    return newRoomID;
+}
+
+
+function sanitizeRoom(room) {
+    return {
+        id: room.id,
+        players: room.players,
+        owner: room.owner,
+        gameState: room.gameState
+        // ❌ surtout pas room.game
+    };
+}
+
+
+function safeAction(socket, roomID, callback) {
+    if (!roomID || !activeRooms[roomID]) return;
+    const room = activeRooms[roomID];
+
+    if (!room.players.ids.includes(socket.id)) return;
+    if (!room.game) return;
+
+    callback(room.game);
+}
+
+
+
+server.listen(PORT,() =>{
+    console.log(`Serveur démarré sur le port : ${PORT}`);
+});
