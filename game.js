@@ -1,10 +1,5 @@
 import {Player} from './Player.js';
 
-/**
- * Pour chaque tour, on envoie via socekt.emit() l'etat du jeu
- * Le client se charge d'afficher la data récupérer via socket.on(data).
- */
-
 var status="";
 
 export class Game{
@@ -18,7 +13,6 @@ export class Game{
         for (let i=0; i<usernames.length; i++){
             var player = new Player(usernames[i], room.players.ids[i]);
             this.players.push(player);
-            //this.playersID.push(room.players.ids[i]);
             this.playersID.push(player.id);
         }
 
@@ -99,7 +93,6 @@ export class Game{
         this.keys = Object.keys(this.properties);
         this.values = Object.values(this.properties);
         
-        // Couleurs de pions (autant que de joueurs)
         const baseColors = ["red", "blue", "green", "purple", "orange", "teal"];
         this.playerColors = usernames.map((_, i) => baseColors[i % baseColors.length]);
     }
@@ -168,7 +161,7 @@ export class Game{
     popUpClick(){
         console.log(this.dices[0], this.dices[1])
         if (!this.currentPlayer) return;
-        //Si le joueur courant a pris sa décision:
+
         this.currentPlayer.buying = true;
         var owner = this.checkOwner(this.currentPlayer.case);
 
@@ -193,7 +186,7 @@ export class Game{
         }
 
 
-        if (this.dices[0] != this.dices[1]){// Si le joueur n'a pas fait de double:  
+        if (this.dices[0] != this.dices[1]){ 
             this.currentPlayerIndex = (this.currentPlayerIndex + 1) % this.players.length;
             this.currentPlayer = this.players[this.currentPlayerIndex];
         }
@@ -227,7 +220,6 @@ export class Game{
         const isDouble = this.dices[0] === this.dices[1];
 
         if (isDouble) {
-            // Le joueur rejoue
             this.currentPlayer.replay = true;
         } 
         else {
@@ -244,12 +236,10 @@ export class Game{
         this.io.to(this.roomID).emit('data', this.getData());
     }
 
-
     checkOwner(caseIndex) {
         for (let p of this.players) {
             if (p !== this.currentPlayer) {
                 if (p.properties[caseIndex]) {
-                    // Le joueur p est propriétaire
                     const rent = this.properties[caseIndex].price;
                     this.currentPlayer.money -= rent;
                     p.money += rent;
@@ -271,52 +261,30 @@ export class Game{
     }
 
     getWinner() {
-    if (this.turn >= this.MAX_TURN){
-        var maxi = 0;
-        let winner = null;
-        for (const player of this.players){
-            if (player.money > maxi){
-                maxi = player.money;
-                winner = player;
+        if (this.turn >= this.MAX_TURN){
+            var maxi = 0;
+            let winner = null;
+            for (const player of this.players){
+                if (player.money > maxi){
+                    maxi = player.money;
+                    winner = player;
+                }
             }
+
+            return winner.getName();
         }
 
-        return winner.getName();
-    }
+        const alivePlayers = this.players.filter(p => p.money > 0);
 
-    // On garde seulement les joueurs encore en jeu
-    const alivePlayers = this.players.filter(p => p.money > 0);
+        if (alivePlayers.length === 1) {
+            return alivePlayers[0].getName();
+        }
 
-    // S'il ne reste qu'un joueur, c'est le gagnant
-    if (alivePlayers.length === 1) {
-        return alivePlayers[0].getName();
-    }
-
-    // Sinon, pas encore de gagnant
-    return null;
+        return null;
     }
 
     free(){
         this.currentPlayer.jailed = false;
         this.currentPlayer.money -= 50 * this.currentPlayer.nbJailed;
-    }
-}
-
-
-export function updatePlayersList(players) {
-    const ul = document.getElementById("lb");
-    ul.innerHTML = ""; // on vide la liste avant de la remplir
-
-    players.forEach(player => {
-        const li = document.createElement("li");
-        li.textContent = `${player.name} — Money: ${player.money}`;
-        ul.appendChild(li);
-    });
-}
-
-function remove(array, element){
-    let index = array.indexOf(element);
-    if (index > -1){
-        array.splice(index,1);
     }
 }

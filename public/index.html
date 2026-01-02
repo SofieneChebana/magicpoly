@@ -1,0 +1,101 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>MagicPoly</title>
+    <link rel="stylesheet" href="styles/index.css">
+    <link rel="stylesheet" href="styles/input.css">
+    <link rel="icon" href="assets//favicon.ico">
+    <script src="https://cdn.socket.io/4.7.5/socket.io.min.js"></script>
+
+</head>
+<body>
+
+    <div id ="selectionScreen">
+        <h1 style="text-align: center;">MagicPoly</h1>
+        <br>
+
+ 
+
+        <div id="name" style="justify-content: center;">
+            <input id="usernameInput" type="text" placeholder="Your username" />
+            <br>
+            <br>
+            <button id="createRoom">Create a room</button>
+        </div>
+        <br>
+        <h2 style="text-align: center">Room Listing:</h2>
+        <br>
+        <span id="error"></span>
+        <ul id="roomList">
+
+        </ul>
+    </div>
+
+    <div id ="roomScreen" style = "display: none;">
+        <h3>Players List:</h3>
+        <ul id="playerList">
+
+        </ul>
+        <p>Wait for the host to start.</p>
+        <button id="start" style="display: none;">Start</button>
+    </div>
+
+    <div id="gameScreen" style = "display: none;">
+
+        <div style="position:relative; width:600px; height:600px;  ">
+            <div id="emote-display-container" style="padding-top: 100px;"></div>
+            <!-- Plateau -->
+            <canvas id="board" width="1200" height="1200"
+                    style="position:absolute; left:0; top:0; width:600px; height:600px; z-index:1;"></canvas>
+            <!-- Pions -->
+            <canvas id="tokens" width="1200" height="1200"
+                    style="position:absolute; left:0; top:0; width:600px; height:600px; z-index:2;"></canvas>
+            
+            <canvas id="diceCanvas" width="800" height="800"></canvas>
+
+            
+        </div>
+
+        <!--<div id="controls"> -->
+        <div class="emote-menu">
+            <button onclick="sendEmote('😀')">😀</button>
+            <button onclick="sendEmote('🤔')">🤔</button>
+            
+        </div>
+            <button id="action" style="display: none;">Throw dices</button>
+                <br>
+                <br>
+            <button id="popUp" style="display: none;">Buy ?</button>
+            <button id="endTurn" style="display: none;">End Turn</button>
+            <button id="free" style="display: none;">Pay 50$ to exit?</button>
+
+                <div id="log" style="border: 2px solid black;"></div>
+                    <ul id="lb"></ul>
+        <!--</div> -->
+    </div>
+
+    <script>
+            function isMobileDevice() {
+                // Test common mobile device keywords in the user agent
+                return /Mobi|Android|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i
+                    .test(navigator.userAgent);
+            }
+
+            if ( !(isMobileDevice()) ){
+                document.getElementById('name').style.paddingLeft = "550px";
+                document.getElementById('board').style.paddingLeft = "450px";
+                document.getElementById('tokens').style.paddingLeft = "450px";
+                document.getElementById('diceCanvas').style.paddingLeft = "450px";
+            }
+            else{
+                document.getElementById('name').style.paddingLeft = "200px";
+            }
+            
+    </script>
+    <script src="functions.js"></script>
+    <script src="client.js"></script>
+
+</body>
+</html>

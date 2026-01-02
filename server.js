@@ -39,11 +39,8 @@ io.on('connection', (socket) => {
     }
 
     socket.emit("roomsDisplay", safeRooms);
-    //socket.emit('roomsDisplay', activeRooms);
     
     socket.on('createRoom', (username) => {
-        // Assurez-vous que le joueur n'est pas déjà en file
-            // Créer une instance du joueur (avec ses stats si besoin)
             
             let roomID = createRoom(socket, username);
             socket.roomID = roomID;
@@ -75,8 +72,6 @@ io.on('connection', (socket) => {
     });
 
     socket.on("disconnect", () => {
-        console.log("Joueur déconnecté :", socket.id);
-
         const roomID = socket.roomID;
         if (!roomID || !activeRooms[roomID]) return;
         if (!activeRooms[roomID] || !activeRooms[roomID].players.ids.includes(socket.id)) {
@@ -85,25 +80,21 @@ io.on('connection', (socket) => {
 
         const room = activeRooms[roomID];
 
-        // Retirer le joueur de la room
+
         const index = room.players.ids.indexOf(socket.id);
         if (index !== -1) {
             room.players.ids.splice(index, 1);
             room.players.usernames.splice(index, 1);
         }
 
-        // Notifier les autres joueurs
-        io.to(roomID).emit('roomUpdate', sanitizeRoom(activeRooms[roomID]));
 
-        // Si la room est vide → supprimer
+        io.to(roomID).emit('roomUpdate', sanitizeRoom(activeRooms[roomID]));
         if (room.players.ids.length === 0) {
             delete activeRooms[roomID];
             console.log("Room supprimée :", roomID);
         }
     });
 
-    
-    // ... Autres événements de jeu (ex: 'playerMove') gérés dans la room ...
     socket.on('clientLoaded', (roomData) =>{
 
         const room = activeRooms[roomData.roomID];
@@ -163,8 +154,6 @@ io.on('connection', (socket) => {
     });
     
     socket.on('sendEmote', (data) => {
-        // data contient : { emoteImg: '😂', playerId: '123' }
-        // On diffuse à tout le monde dans la même partie
         io.to(data.roomID).emit('displayEmote', {
             emote: data.emote,
             playerId: data.playerId
@@ -177,8 +166,7 @@ function createRoom(socket, username) {
     const newRoomID = "ROOM_"+roomCounter;
     const matchedPlayers = [socket];
     const playerIDs = matchedPlayers.map(p => p.id);
-    console.log(playerIDs);
-    // 1. Enregistrement de la Room
+
     activeRooms[newRoomID] = {
         id: newRoomID,
         players: {  
@@ -190,21 +178,18 @@ function createRoom(socket, username) {
         game: null
     };
     roomCounter++;
-    console.log(`Room créé: ${newRoomID}. Il y a ${roomCounter} rooms`);
 
-    // 2. Assignation et Notification
+
     matchedPlayers.forEach(player => {
-        // Le socket rejoint le canal de diffusion de la Room
+
         player.join(newRoomID); 
         
-        // Envoi au client des informations de connexion (RoomID et joueurs)
         socket.emit('matchFound', { 
             roomID: newRoomID, 
             players: playerIDs 
         });
     });
 
-    // 3. Notifier la Room entière que les joueurs sont prêts à charger
     io.to(newRoomID).emit('roomUpdate', activeRooms[newRoomID]);
 
     return newRoomID;
@@ -217,7 +202,6 @@ function sanitizeRoom(room) {
         players: room.players,
         owner: room.owner,
         gameState: room.gameState
-        // ❌ surtout pas room.game
     };
 }
 
@@ -235,5 +219,5 @@ function safeAction(socket, roomID, callback) {
 
 
 server.listen(PORT,() =>{
-    console.log(`Serveur démarré sur le port : ${PORT}`);
+    console.log(`Server launched on port : ${PORT}`);
 });

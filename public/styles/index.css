@@ -1,0 +1,136 @@
+body{
+  background-repeat: no-repeat;
+  background-size: cover;
+  background-color: #c7322c;
+}
+
+/* CSS */
+button {
+  appearance: none;
+  background-color: #2ea44f;
+  border: 1px solid rgba(27, 31, 35, .15);
+  border-radius: 6px;
+  box-shadow: rgba(27, 31, 35, .1) 0 1px 0;
+  box-sizing: border-box;
+  color: #fff;
+  cursor: pointer;
+  display: inline-block;
+  font-family: -apple-system,system-ui,"Segoe UI",Helvetica,Arial,sans-serif,"Apple Color Emoji","Segoe UI Emoji";
+  font-size: clamp(14px, 3vw, 24px);
+  padding: clamp(8px, 2vw, 16px);
+  font-weight: 600;
+  line-height: 20px;
+  position: relative;
+  text-align: center;
+  text-decoration: none;
+  user-select: none;
+  -webkit-user-select: none;
+  touch-action: manipulation;
+  vertical-align: middle;
+  white-space: nowrap;
+}
+
+button:focus:not(:focus-visible):not(.focus-visible) {
+  box-shadow: none;
+  outline: none;
+}
+
+button:hover {
+  background-color: #2c974b;
+}
+
+button:focus {
+  box-shadow: rgba(46, 164, 79, .4) 0 0 0 3px;
+  outline: none;
+}
+
+button:disabled {
+  background-color: #94d3a2;
+  border-color: rgba(27, 31, 35, .1);
+  color: rgba(255, 255, 255, .8);
+  cursor: default;
+}
+
+button:active {
+  background-color: #298e46;
+  box-shadow: rgba(20, 70, 32, .2) 0 1px 0 inset;
+}
+button {
+    font-size: clamp(14px, 3vw, 24px);
+    padding: clamp(8px, 2vw, 16px);
+}
+
+ul{
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  display: flex;
+  flex-direction: column;   
+  align-items: center;     
+  gap: 10px;                
+
+}
+
+li {
+  display: inline-block;
+  margin: 10px 0;
+  padding: 10px 20px;
+  border: 1px solid black;
+  border-radius: 6px;
+  transition: 0.3s;
+  background: #f5f5f5;
+
+}
+
+li:hover {
+  background: black;
+  color: white;
+}
+
+#controls {
+  display: block;
+  padding: 8px 15px;
+  border: 1px solid black;
+  border-radius: 6px;
+}
+
+.floating-emote {
+  position: absolute;
+  font-size: 2rem;
+  animation: floatUp 2s forwards; 
+  pointer-events: none;
+  z-index: 1000;
+}
+
+@keyframes floatUp {
+  0% { transform: translateY(0); opacity: 1; }
+  100% { transform: translateY(-100px); opacity: 0; }
+}
+
+#gameScreen {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 20px;
+}
+
+@media (min-width: 900px) {
+    #gameScreen {
+        flex-direction: row;
+        justify-content: center;
+    }
+}
+
+#log {
+    width: 100%;
+    max-height: 200px;
+    overflow-y: auto;
+    background: #f5f5f5;
+    border: 1px solid #ccc;
+    padding: 8px;
+    font-family: Arial, sans-serif;
+    font-size: 14px;
+}
+#log p {
+    margin: 4px 0;
+}
