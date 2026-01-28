@@ -1,5 +1,4 @@
-//const socket = io('');
-const socket = io('localhost:3000');
+const socket = io(window.location.origin);
 
 
 
