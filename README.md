@@ -1,4 +1,7 @@
-A web based monopoly to play online with friends.
+<h1>Magicpoly</h1>
+A web based monopoly to play online with friends. <br>
+<strong>This project was primarily created as a technical exercise to strengthen my skills in Node.js, especially regarding real‑time communication between clients and the server through Socket.io. The Monopoly game serves as a practical environment to explore and test these concepts.</strong> <br> <br>
+If for some reason you want to play the game, you can check the Instructions section to help you get it running.
 
 <h2> Instructions</h2>
 One player has to host the game server on their machine.<br><br>
@@ -28,7 +31,7 @@ This will launch the game server.
    ```
    This will automatically generate an URL and host the website.
 
-4.  𝗘𝗻𝗷𝗼𝘆.
+4.  𝗘𝗻𝗷𝗼𝘆!
 
 <h2>Screenshots</h2>
 
