@@ -192,14 +192,20 @@ function getCellCenter(index, size, caseSize){
 
 
 async function drawTokens(size, caseSize, players, properties, owners, playerColors){
-        drawBoard(size, caseSize, properties, owners, playerColors);
+        drawBoard(size, caseSize, properties, owners, playerColors); // Voir méthode ci-dessous
         const sleep = ms => new Promise(r => setTimeout(r, ms));
         await sleep(700);
         var canvas = document.getElementById("tokens");
         var ctx = canvas.getContext("2d");
 
-        ctx.clearRect(0, 0, size, size);
+        // Effacer les anciens pions sans effacer le plateau:
+        // Option simple: effacer tout et redessiner le plateau + pions.
+        // Option rapide: effacer seulement des petits rectangles autour des positions
+        // Ici, pour la clarté, on refait tout (plateau + pions) — sinon, garde un second canvas.
 
+        // Redessine le plateau (tu peux extraire la logique de dessin dans une méthode drawBoard())
+        ctx.clearRect(0, 0, size, size);
+        // Puis dessine les pions
         const radius = 14;
         const offsets = [
             {dx: -18, dy: -18},
@@ -217,11 +223,13 @@ async function drawTokens(size, caseSize, players, properties, owners, playerCol
             ctx.beginPath();
             ctx.arc(x + dx, y + dy, radius, 0, Math.PI * 2);
             ctx.fillStyle = playerColors[i];
+            if (player.mahmoud == true) ctx.fillStyle = "yellow";
             ctx.fill();
             ctx.lineWidth = 2;
             ctx.strokeStyle = "black";
             ctx.stroke();
 
+            // Initiales du joueur pour lisibilité
             ctx.fillStyle = "white";
             ctx.font = "bold 12px Arial";
             ctx.textAlign = "center";
@@ -233,9 +241,33 @@ async function drawTokens(size, caseSize, players, properties, owners, playerCol
     }
 
 
-function showEmoteOnScreen(emoji, playerId) {
+async function showEmoteOnScreen(emoji, player) {
   const container = document.getElementById('emote-display-container');
   const div = document.createElement('div');
+
+  
+  const canvas = document.getElementById("tokens");
+  const rect = canvas.getBoundingClientRect();
+
+  // Positions exprimées en pourcentage du canvas
+  const POSITIONS = [
+    [0.05, 0.10],   // joueur 0
+    [0.80, 0.10],   // joueur 1
+    [0.05, 0.80],   // joueur 2
+    [0.80, 0.80]    // joueur 3
+  ]; 
+  const COLORS = [
+    "red",
+    "blue",
+    "green",
+    "purple"
+  ]
+  const [x, y] = POSITIONS[player];
+
+  const screenX = rect.left + rect.width * x;
+  const screenY = rect.top + rect.height * y;
+
+  
   
   div.innerHTML = emoji;
   div.className = 'floating-emote';
@@ -243,7 +275,7 @@ function showEmoteOnScreen(emoji, playerId) {
 
   // Nettoyage du DOM après l'animation
   setTimeout(() => {
-    div.remove();
+    img.remove();
   }, 2000);
 }
 
@@ -258,3 +290,20 @@ function addLog(message) {
     log.scrollTop = log.scrollHeight;
 }
 
+function displayChance(chanceText){
+    document.getElementById("popupOverlay").style.display = "block";
+    document.getElementById("chanceText").innerHTML = chanceText;
+}
+
+function playMusic(audio){
+    const playlist = ["assets/musics/jazz-for-parmesan.mp3", "assets/musics/midnight-sidewalk.mp3" ];
+
+    audio.src = playlist[Math.floor(Math.random() * 2) % playlist.length];
+
+    audio.addEventListener('ended', ()=>{
+        audio.src = playlist[Math.floor(Math.random() * 2) % playlist.length];
+        audio.play();
+    });
+
+    audio.play();
+}

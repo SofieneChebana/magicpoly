@@ -3,9 +3,10 @@
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>MagicPoly</title>
+    <title>Online Game</title>
     <link rel="stylesheet" href="styles/index.css">
     <link rel="stylesheet" href="styles/input.css">
+    <link rel="stylesheet" href="styles/modal.css">
     <link rel="icon" href="assets//favicon.ico">
     <script src="https://cdn.socket.io/4.7.5/socket.io.min.js"></script>
 
@@ -13,19 +14,19 @@
 <body>
 
     <div id ="selectionScreen">
-        <h1 style="text-align: center;">MagicPoly</h1>
+        <h1 style="text-align: center; color:white"><strong>MagicPoly</strong></h1>
         <br>
 
  
 
         <div id="name" style="justify-content: center;">
-            <input id="usernameInput" type="text" placeholder="Your username" />
+            <input id="usernameInput" type="text" placeholder="Votre pseudo" />
             <br>
             <br>
-            <button id="createRoom">Create a room</button>
+            <button id="createRoom">Create a Room</button>
         </div>
         <br>
-        <h2 style="text-align: center">Room Listing:</h2>
+        <h2 style="text-align: center">Room List:</h2>
         <br>
         <span id="error"></span>
         <ul id="roomList">
@@ -38,8 +39,16 @@
         <ul id="playerList">
 
         </ul>
-        <p>Wait for the host to start.</p>
+        <p>Attendez que l'Hôte lance la partie.</p>
         <button id="start" style="display: none;">Start</button>
+        <div>
+            <input type="checkbox" id="checkbox" name="checkbox" style="display:none;"checked />
+            <label for="ai">Ajouter IA</label>
+        </div>
+        <div >
+            <img src="assets/classic.png"   id="classic"/>
+            
+        </div>
     </div>
 
     <div id="gameScreen" style = "display: none;">
@@ -55,28 +64,47 @@
             
             <canvas id="diceCanvas" width="800" height="800"></canvas>
 
+            <div id="emoteCanvas" style="position:absolute; top:0; left:0; width:100%; height:100%; pointer-events:none;"></div>
+
             
         </div>
 
+    <!-- Contrôles en dehors du conteneur -->
         <!--<div id="controls"> -->
         <div class="emote-menu">
             <button onclick="sendEmote('😀')">😀</button>
             <button onclick="sendEmote('🤔')">🤔</button>
             
         </div>
-            <button id="action" style="display: none;">Throw dices</button>
+            <button id="startMusic">♫</button>
+            <button id="action" style="display: none;">Lancer les dés</button>
                 <br>
                 <br>
-            <button id="popUp" style="display: none;">Buy ?</button>
-            <button id="endTurn" style="display: none;">End Turn</button>
-            <button id="free" style="display: none;">Pay 50$ to exit?</button>
+            <button id="popUp" style="display: none;">Acheter?</button>
+            <button id="endTurn" style="display: none;">Finir le tour</button>
+            <button id="free" style="display: none;">Payer 50€ pour sortir ?</button>
 
                 <div id="log" style="border: 2px solid black;"></div>
                     <ul id="lb"></ul>
         <!--</div> -->
+        <!-- Popup structure -->
+        <div id="popupOverlay" class="popup-overlay">
+            <div class="popup-content">
+                <span class="close-btn" id="closePopupBtn">&times;</span>
+                <h2>Chance/Caisse de communauté</h2>
+                <p id="chanceText"></p>
+            </div>
+        </div>
+        <button id="quit" style="display:none"> Quitter ⇨</button>
     </div>
 
+    
+
     <script>
+
+        document.getElementById("popupOverlay").addEventListener("click", () =>{
+            document.getElementById("popupOverlay").style.display = "none";
+        })
             function isMobileDevice() {
                 // Test common mobile device keywords in the user agent
                 return /Mobi|Android|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i
@@ -84,10 +112,7 @@
             }
 
             if ( !(isMobileDevice()) ){
-                document.getElementById('name').style.paddingLeft = "550px";
-                document.getElementById('board').style.paddingLeft = "450px";
-                document.getElementById('tokens').style.paddingLeft = "450px";
-                document.getElementById('diceCanvas').style.paddingLeft = "450px";
+                console.log("coucou")
             }
             else{
                 document.getElementById('name').style.paddingLeft = "200px";

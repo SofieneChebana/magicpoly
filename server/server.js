@@ -15,8 +15,7 @@ const ROOM_SIZE = 4;
 const io = new Server(server, {
   cors: { origin: "*", methods: ["GET", "POST"] }
 });
-
-let activeRooms = {};
+let activeRooms = {};      // Stockage des rooms actives
 let roomCounter = 0;
 let playersLoaded = {};
 
@@ -38,87 +37,80 @@ io.on('connection', (socket) => {
         };
     }
 
-    socket.emit("roomsDisplay", safeRooms);
+    socket.emit("roomsDisplay", getSafeRooms());
     
     socket.on('createRoom', (username) => {
             
             let roomID = createRoom(socket, username);
             socket.roomID = roomID;
             socket.emit('roomInfo', sanitizeRoom(activeRooms[roomID]));
+            io.emit("roomsDisplay", getSafeRooms());
+            
     });
  
 
     socket.on('join', (data) => {
-    const roomID = data[1];
-    const username = data[2];
+        const roomID = data[1];
+        const username = data[2];
 
-    const room = activeRooms[roomID];
-    if (!room) return;
+        const room = activeRooms[roomID];
+        if (!room) return;
 
-    if (room.players.ids.length >= ROOM_SIZE) return;
+        if (room.players.ids.length >= ROOM_SIZE) return;
 
-    if (room.gameState.status !== 'waiting_for_load') return;
+        if (room.gameState.status !== 'waiting_for_load') return;
 
-    if (room.players.usernames.includes(username)) return;
+        if (room.players.usernames.includes(username)) return;
 
-    room.players.ids.push(socket.id);
-    room.players.usernames.push(username);
+        room.players.ids.push(socket.id);
+        room.players.usernames.push(username);
 
-    socket.roomID = roomID;
-    socket.join(roomID);
+        socket.roomID = roomID;
+        socket.join(roomID);
 
-    io.to(roomID).emit('roomInfo', sanitizeRoom(room));
+        io.to(roomID).emit('roomInfo', sanitizeRoom(room));
     });
 
     socket.on("disconnect", () => {
+        console.log("Joueur déconnecté :", socket.id);
+
         const roomID = socket.roomID;
         if (!roomID || !activeRooms[roomID]) return;
         if (!activeRooms[roomID] || !activeRooms[roomID].players.ids.includes(socket.id)) {
-            return; // ignore action
+            return; // ignorer l'action
         }
 
         const room = activeRooms[roomID];
 
-
+        // Retirer le joueur de la room
         const index = room.players.ids.indexOf(socket.id);
         if (index !== -1) {
             room.players.ids.splice(index, 1);
             room.players.usernames.splice(index, 1);
         }
 
-
+        // Notifier les autres joueurs
         io.to(roomID).emit('roomUpdate', sanitizeRoom(activeRooms[roomID]));
+
+        // Si la room est vide → supprimer
         if (room.players.ids.length === 0) {
             delete activeRooms[roomID];
             console.log("Room supprimée :", roomID);
+            roomCounter--;
+            io.emit("roomsDisplay", getSafeRooms());
         }
     });
 
-    socket.on('clientLoaded', (roomData) =>{
-
-        const room = activeRooms[roomData.roomID];
-        if (!room) return; 
-
-        
-        playersLoaded[socket.id] = true;
-
-        
-        if (room.players.ids.every(id => playersLoaded[id])){
-            console.log(`[${roomID}`);
-        }
-        activeRooms[roomID].gameState.status = 'playing';
-
-        io.to(roomID).emit('start', { message: 'GO!' });
-    });
-
-    socket.on('startClick', (roomID)=>{
+    socket.on('startClick', (data)=>{
+        let roomID  = data[0];
+        let map     = data[1];
+        let ai      = data[2];
         activeRooms[roomID].gameState.status = 'started';
-        console.log(activeRooms[roomID] + "a lancé la partie");
-        console.log(activeRooms[roomID].gameState.status);
 
-        activeRooms[roomID].game = new Game(io, activeRooms[roomID], activeRooms[roomID].players.usernames);
+        activeRooms[roomID].game = new Game(io, activeRooms[roomID], activeRooms[roomID].players.usernames, map, ai);
+        
         activeRooms[roomID].game.init();
-        io.to(roomID).emit('start', roomID);
+        io.to(roomID).emit('start', data);
     });
 
 
@@ -153,9 +145,19 @@ io.on('connection', (socket) => {
     });
     
     socket.on('sendEmote', (data) => {
+        const playersId = activeRooms[data.roomID].game.getPlayersId();
+
+        var player_number = null;
+        for (let i=0; i < playersId.length; i++){
+            if (data.playerId === playersId[i]){
+                player_number = i;
+            }
+        }
+            
+
         io.to(data.roomID).emit('displayEmote', {
             emote: data.emote,
-            playerId: data.playerId
+            player : player_number
         });
     });
 });
@@ -166,6 +168,7 @@ function createRoom(socket, username) {
     const matchedPlayers = [socket];
     const playerIDs = matchedPlayers.map(p => p.id);
 
+    // 1. Enregistrement de la Room
     activeRooms[newRoomID] = {
         id: newRoomID,
         players: {  
@@ -177,18 +180,21 @@ function createRoom(socket, username) {
         game: null
     };
     roomCounter++;
+    console.log(`Room créé: ${newRoomID}. Il y a ${roomCounter} rooms`);
 
-
+    // 2. Assignation et Notification
     matchedPlayers.forEach(player => {
-
+        // Le socket rejoint le canal de diffusion de la Room
         player.join(newRoomID); 
         
+        // Envoi au client des informations de connexion (RoomID et joueurs)
         socket.emit('matchFound', { 
             roomID: newRoomID, 
             players: playerIDs 
         });
     });
 
+    // 3. Notifier la Room entière que les joueurs sont prêts à charger
     io.to(newRoomID).emit('roomUpdate', activeRooms[newRoomID]);
 
     return newRoomID;
@@ -215,8 +221,22 @@ function safeAction(socket, roomID, callback) {
     callback(room.game);
 }
 
+function getSafeRooms(){
+    const safeRooms = {};
 
+        for (const roomID in activeRooms) {
+            const room = activeRooms[roomID];
 
+            safeRooms[roomID] = {
+                id: room.id,
+                gameState: {
+                    status: room.gameState.status,
+                    playersCount: room.players.usernames.length,
+                }
+            };
+        }
+    return safeRooms;
+}
 server.listen(PORT,() =>{
-    console.log(`Server launched on port : ${PORT}`);
+    console.log(`Serveur démarré sur le port : ${PORT}`);
 });

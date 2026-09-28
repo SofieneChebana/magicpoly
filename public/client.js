@@ -1,21 +1,27 @@
-const socket = io(window.location.origin);
-
+// client.js (Côté navigateur)
+//const socket = io(''); // L'URL du serveur
+const socket = io('localhost:3000');
 
 
 var username = null;
 var myRoomID = null;
+var ai = false;
+var map = null;
 let hasPlayedThisTurn = false;
 var dice1Value = 1;
 var dice2Value = 1;
+//Sockets :
 
 socket.on('roomsDisplay', (activeRooms) =>{
     let li;
     let roomList = document.getElementById("roomList");
+    roomList.innerHTML="";
     for (const roomID in activeRooms){
         li = document.createElement('li');
         li.innerHTML = "Id : "+activeRooms[roomID].id;
         li.innerHTML+= "<br>";
         li.innerHTML+= "\n Status : "+ activeRooms[roomID].gameState.status;
+        if (activeRooms[roomID].gameState.status === "waiting_for_load") li.backgroundColor = "green";
         li.addEventListener('click', () =>{
             username = document.getElementById('usernameInput').value;
             if (!username || username.trim() ===""){
@@ -46,10 +52,13 @@ socket.on('roomInfo', (room) =>{
     
     if (socket.id === room.owner){
        let start = document.getElementById("start");
-       console.log(start);
+       let checkbox = document.getElementById("checkbox");
        start.style.display = "block";
+       checkbox.style.display = "block";
         start.addEventListener('click', ()=>{
-            socket.emit("startClick", room.id);
+            if (checkbox.checked) ai = true;
+            if (map !=null) socket.emit("startClick", [room.id, map, ai]);
+            ai = false;
         });
     }
 
@@ -57,27 +66,48 @@ socket.on('roomInfo', (room) =>{
     audio.play();
 });
 
-socket.on('start', async (roomID) =>{
+socket.on('start', async (data) =>{
+    roomID = data[0];
+    map    = data[1];
     myRoomID = roomID;
     document.getElementById("roomScreen").style.display = "none";
+    
     document.getElementById("gameScreen").style.display = "block";
+
     let audio = new Audio("assets/sounds/start.mp3");
-    audio.play();
-    //const sleep = ms => new Promise(r => setTimeout(r, ms));
-    //await sleep(700);
-    //playMusic(audio);
+    document.getElementById("startMusic").addEventListener("click", async () => {
+        try {
+            document.getElementById("startMusic").style.display = "none";
+            await audio.play();
+            const sleep = ms => new Promise(r => setTimeout(r, ms));
+            await sleep(700);
+            playMusic(audio);
+        } catch(e) {
+            console.log("Erreur de lecture :", e);
+        }
+    });
 });
 
 socket.off("data");
 socket.on('data', (data) =>{
+    
     if (data.status != null){
         addLog(data.status);
     }
+
+    if (data.chanceText != null){
+        displayChance(data.chanceText);
+    }
+
     drawTokens(data.size, data.caseSize, data.players, data.properties, data.owners, data.playerColors);
     updatePlayersList(data.players);
-    
+    // Si le joueur rejoue, on réinitialise son état
     if (data.currentPlayer.replay === true && socket.id === data.currentPlayer.id) {
         hasPlayedThisTurn = false;
+    }
+    
+    if (data.currentPlayer.jailed === true && data.dices !== null && data.dices[0] !== data.dices[1]) {
+    hasPlayedThisTurn = true; // il a joué, même s'il ne bouge pas
     }
 
     if (socket.id == data.currentPlayer.id){
@@ -107,14 +137,19 @@ socket.on('data', (data) =>{
 });
 
 socket.on('displayEmote', (data) => {
-  showEmoteOnScreen(data.emote, data.playerId);
+  showEmoteOnScreen(data.emote, data.player);
+});
+
+socket.on("eliminated", (data) =>{
+    document.getElementById('quit').style.display = "block";
+    document.getElementById('action').style.display = "none";
 });
 
 
 function sendEmote(emoji) {
   socket.emit('sendEmote', {
     emote: emoji,
-    playerId: socket.id,
+    playerId: socket.id, // Votre ID unique
     roomID: myRoomID
   });
 }
@@ -127,17 +162,19 @@ const rollBtn = document.getElementById("action");
 
 let isRolling = false;
 let startTime = 0;
-const rollDuration = 700;
+const rollDuration = 700; // durée du roulement
 
+// --- Dessin du dé 2D ---
 function drawDice(value, posX=0, posY=0, shakeX = 0, shakeY = 0) {
     ctx.clearRect(posX - 20, posY - 20, 400, 400);
 
-
+    //ctx.clearRect(posX, posY, canvas.width, canvas.height);
   const size = 120;
   const x = posX + shakeX;
   const y = posY + shakeY;
   
 
+  // carré du dé
   ctx.fillStyle = "#ffffff";
   ctx.strokeStyle = "#000000";
   ctx.lineWidth = 4;
@@ -164,7 +201,7 @@ function drawDice(value, posX=0, posY=0, shakeX = 0, shakeY = 0) {
   if (value === 6) { dot(x + dx, cy); dot(x + 3 * dx, cy); }
 }
 
-
+// --- Animation du jet ---
 function animateRoll(timestamp) {
   if (!startTime) startTime = timestamp;
   const elapsed = timestamp - startTime;
@@ -192,6 +229,7 @@ function startDiceRoll() {
     requestAnimationFrame(animateRoll);
 }
 
+// affichage initial
 drawDice(dice1Value, 100, 70);
 drawDice(dice1Value, 350, 250);
 
@@ -210,6 +248,13 @@ document.getElementById('createRoom').addEventListener('click', () => {
         document.getElementById("roomScreen").style.display = "block";
     }
 });
+
+document.getElementById('classic').addEventListener('click', () => {
+    map = "classic"; 
+    document.getElementById('classic').style.border = "solid black";
+});
+
+
 
 document.getElementById('action').addEventListener('click', () => {
     if (!myRoomID) return;
@@ -243,3 +288,10 @@ document.getElementById('free').addEventListener('click', ()=>{
     socket.emit("freeClick", myRoomID);
 
 });
+
+document.getElementById('quit').addEventListener('click', ()=>{
+    document.getElementById('free').style.display = 'none';
+    window.location.href = "index.html";
+});
+
+    

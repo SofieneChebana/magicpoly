@@ -4,11 +4,12 @@ export class Player{
         this.money = 1500;
         this.properties = {};
         this.case = 0;
-        this.buying = null;
         this.id = id;
         this.replay = false;
         this.jailed = false;
         this.nbJailed = 0;
+        this.mahmoud = false;
+        this.type = null; //0 = Player; 1 = AI
     }
 
     getName(){
@@ -16,6 +17,17 @@ export class Player{
     }
 
     getMoney(){
+        return this.money;
+    }
+
+    changeMoney(money){
+        if (this.mahmoud){
+            this.money += (money / 2);
+        }
+        else{
+            this.money+= money;
+        }
+
         return this.money;
     }
 
@@ -38,7 +50,6 @@ export class Player{
         this.money -= prop.price;
         this.properties[caseIndex] = prop
 
-        this.buying = null;
     }
 
 

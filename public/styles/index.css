@@ -1,7 +1,14 @@
 body{
+  background-image: url('../assets/background.jpg');
   background-repeat: no-repeat;
   background-size: cover;
   background-color: #c7322c;
+}
+
+#logo, #name, #board, #tokens, #diceCanvas, #usernameInput, #createRoom {
+    margin-left: auto;
+    margin-right: auto;
+    display: block;
 }
 
 /* CSS */
@@ -65,14 +72,21 @@ ul{
   padding: 0;
   margin: 0;
   display: flex;
-  flex-direction: column;   
-  align-items: center;     
-  gap: 10px;                
+  flex-direction: column;   /* 🔥 force les li à être l’un sous l’autre */
+  align-items: center;      /* centre horizontalement */
+  gap: 10px;                /* espace entre les li */
 
 }
 
+@media (max-width: 600px) {
+    li {
+        width: 90%;
+        text-align: center;
+    }
+}
+
 li {
-  display: inline-block;
+  display: inline-block;   /* largeur = contenu */
   margin: 10px 0;
   padding: 10px 20px;
   border: 1px solid black;
@@ -87,6 +101,11 @@ li:hover {
   color: white;
 }
 
+img {
+    max-width: 100%;
+    height: auto;
+}
+
 #controls {
   display: block;
   padding: 8px 15px;
@@ -97,7 +116,7 @@ li:hover {
 .floating-emote {
   position: absolute;
   font-size: 2rem;
-  animation: floatUp 2s forwards; 
+  animation: floatUp 2s forwards; /* L'emote monte et disparaît */
   pointer-events: none;
   z-index: 1000;
 }
@@ -105,6 +124,28 @@ li:hover {
 @keyframes floatUp {
   0% { transform: translateY(0); opacity: 1; }
   100% { transform: translateY(-100px); opacity: 0; }
+}
+
+
+#roomScreen {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 20px;
+}
+
+@media (min-width: 900px) {
+    #roomScreen {
+        flex-direction: row;
+        justify-content: center;
+    }
+}
+
+@media (max-width: 900px) {
+    #roomScreen img{
+      width: 50%;
+      height: auto;
+    }
 }
 
 #gameScreen {
@@ -117,8 +158,15 @@ li:hover {
 @media (min-width: 900px) {
     #gameScreen {
         flex-direction: row;
-        justify-content: center;
+        align-items: flex-start;
     }
+}
+
+#selectionScreen, #roomScreen, #gameScreen {
+    width: 100%;
+    max-width: 1200px;
+    margin: auto;
+    padding: 20px;
 }
 
 #log {
@@ -133,4 +181,12 @@ li:hover {
 }
 #log p {
     margin: 4px 0;
+}
+
+#board, #tokens, #diceCanvas {
+    width: 90vw;        /* prend 90% de la largeur de l’écran */
+    max-width: 600px;   /* ne dépasse jamais 600px */
+    height: auto;
+    display: block;
+    margin: auto;
 }
